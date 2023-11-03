@@ -6,42 +6,58 @@ use alloc::vec;
 use alloc::vec::Vec;
 use windows_kernel_rs::device::{
     Completion, Device, DeviceDoFlags, DeviceFlags, DeviceOperations, DeviceType, RequestError};
-use windows_kernel_rs::request::{ReadRequest, WriteRequest};
-use windows_kernel_rs::{Access, Driver, Error, kernel_module, KernelModule, SymbolicLink};
+use windows_kernel_rs::{Access, Driver, Error, IoControlRequest, kernel_module, KernelModule, println, RequiredAccess, SymbolicLink};
 
 struct MyDevice {
-    data: Vec<u8>,
+    value: u32,
+}
+
+const IOCTL_PRINT_VALUE: u32 = 0x800;
+const IOCTL_READ_VALUE:  u32 = 0x801;
+const IOCTL_WRITE_VALUE: u32 = 0x802;
+
+impl MyDevice {
+    fn print_value(&mut self, _request: &IoControlRequest) -> Result<u32, Error> {
+        println!("value: {}", self.value);
+
+        Ok(0)
+    }
+
+    fn read_value(&mut self, request: &IoControlRequest) -> Result<u32, Error> {
+        let mut user_ptr = request.user_ptr();
+
+        user_ptr.write(&self.value)?;
+
+        Ok(core::mem::size_of::<u32>() as u32)
+    }
+
+    fn write_value(&mut self, request: &IoControlRequest) -> Result<u32, Error> {
+        let user_ptr = request.user_ptr();
+
+        self.value = user_ptr.read()?;
+
+        Ok(0)
+    }
 }
 
 impl DeviceOperations for MyDevice {
-    fn read(&mut self, _device: &Device, request: ReadRequest) -> Result<Completion, RequestError> {
-        let mut user_ptr = request.user_ptr();
-        let slice = user_ptr.as_mut_slice();
+    fn ioctl(&mut self, _device: &Device, request: IoControlRequest) -> Result<Completion, RequestError> {
+        let result = match request.function() {
+            (_, IOCTL_PRINT_VALUE) =>
+                self.print_value(&request),
+            (RequiredAccess::READ_DATA, IOCTL_READ_VALUE) =>
+                self.read_value(&request),
+            (RequiredAccess::WRITE_DATA, IOCTL_WRITE_VALUE) =>
+                self.write_value(&request),
+            _ => Err(Error::INVALID_PARAMETER),
+        };
 
-        let offset = (request.offset() as usize).min(self.data.len());
-        let size = slice.len().min(self.data.len() - offset);
-
-        slice[0..size].copy_from_slice(&self.data[offset..offset + size]);
-
-        Ok(Completion::Complete(size as u32, request.into()))
-    }
-
-    fn write(&mut self, _device: &Device, request: WriteRequest) -> Result<Completion, RequestError> {
-        let user_ptr = request.user_ptr();
-
-        if request.offset() > 0 {
-            return Err(RequestError(Error::END_OF_FILE, request.into()))?;
+        match result {
+            Ok(size) => Ok(Completion::Complete(size, request.into())),
+            Err(e) => Err(RequestError(e, request.into())),
         }
-
-        let slice = user_ptr.as_slice();
-        let size = slice.len().min(4096);
-
-        self.data = slice[0..size].to_vec();
-
-        Ok(Completion::Complete(size as u32, request.into()))
     }
 }
-
 struct Module {
     _device: Device,
     _symbolic_link: SymbolicLink,
@@ -56,7 +72,7 @@ impl KernelModule for Module {
             DeviceDoFlags::DO_BUFFERED_IO,
             Access::NonExclusive,
             MyDevice {
-                data: vec![],
+                value: 0,
             },
         )?;
         let symbolic_link = SymbolicLink::new("\\??\\Womic", "\\Device\\Womic")?;

@@ -1,4 +1,5 @@
 use std::fs::OpenOptions;
+use std::io::{Read, Write};
 use std::os::windows::io::AsRawHandle;
 use winioctl::{DeviceType, Error};
 use winioctl::{ioctl_none, ioctl_read, ioctl_write};
@@ -12,26 +13,29 @@ ioctl_read!(ioctl_read_value, DeviceType::Unknown, IOCTL_READ_VALUE, i32);
 ioctl_write!(ioctl_write_value, DeviceType::Unknown, IOCTL_WRITE_VALUE, i32);
 
 fn main() -> Result<(), Error> {
-    let file = OpenOptions::new()
+    let mut file = OpenOptions::new()
         .read(true)
         .write(true)
         .create(false)
-        .open("\\??\\Example")?;
+        .open("\\??\\Womic")?;
+
+
+
+    unsafe {
+        ioctl_write_value(file.as_raw_handle(), &5)?;
+    }
+
     let mut value = 0;
 
     unsafe {
         ioctl_read_value(file.as_raw_handle(), &mut value)?;
     }
 
-    value += 1;
-
     unsafe {
-        ioctl_write_value(file.as_raw_handle(), &value)?;
+        ioctl_print_value(file.as_raw_handle()).expect("аааа");
     }
 
-    unsafe {
-        ioctl_print_value(file.as_raw_handle())?;
-    }
+    print!("value: {}\n", value);
 
     Ok(())
 }
