@@ -1,5 +1,5 @@
 [package]
-name = "02-hello-world"
+name = "helloworld"
 version = "0.1.0"
 edition = "2018"
 
@@ -23,3 +23,7 @@ features = [
     "wdm",
     "ntstatus",
 ]
+
+[dependencies]
+windows-kernel-rs = { path = "../windows-kernel-rs" }
+windows-kernel-sys = { path = "../windows-kernel-sys" }
