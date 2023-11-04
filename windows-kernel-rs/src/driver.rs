@@ -33,18 +33,15 @@ impl Driver {
         device_do_flags: DeviceDoFlags,
         access: Access,
         data: T,
-    ) -> Result<Device, Error>
-    where
+        ) -> Result<Device, Error>
+        where
         T: DeviceOperations
     {
-        // Box the data.
         let data = Box::new(data);
 
-        // Convert the name to UTF-16 and then create a UNICODE_STRING.
         let name = U16CString::from_str(name).unwrap();
         let mut name = create_unicode_string(name.as_slice());
 
-        // Create the device.
         let mut device = core::ptr::null_mut();
 
         unsafe {

@@ -1,5 +1,5 @@
 [env]
-VC_BUILD_DIR="C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
+VC_BUILD_DIR = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
 
 [env.development]
 TARGET_PATH = "target/debug"
@@ -14,7 +14,15 @@ script = '''
 if exist DriverCertificate.cer ( rm DriverCertificate.cer )
 '''
 
+[tasks.stop-driver]
+ignore_errors = true
+script = '''
+sc stop example
+sc delete example > nul 2>&1
+'''
+
 [tasks.build-driver]
+dependencies = ["stop-driver"]
 script = '''
 cargo b %BUILD_FLAGS%
 '''
@@ -23,7 +31,7 @@ cargo b %BUILD_FLAGS%
 ignore_errors = true
 script = '''
 cd %TARGET_PATH%
-rename helloworld.dll driver.sys
+move /Y dolboebdriver.dll driver.sys
 '''
 
 [tasks.sign]
@@ -35,4 +43,11 @@ if not exist DriverCertificate.cer ( makecert -r -pe -ss PrivateCertStore -n CN=
 
 signtool sign /a /v /s PrivateCertStore /n DriverCertificate /fd certHash /t http://timestamp.digicert.com %TARGET_PATH%/driver.sys
 
+'''
+
+[tasks.start-driver]
+dependencies = ["sign"]
+script = '''
+sc.exe create example binPath=Z:\RustProjects\windows-kernel-rs\dolboebdriver\target\debug\driver.sys type=kernel
+sc start example
 '''

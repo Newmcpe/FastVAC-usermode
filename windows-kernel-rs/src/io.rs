@@ -19,7 +19,7 @@ pub fn _print(args: core::fmt::Arguments) {
     // panic-free.
     let s = alloc::format!("{}", args);
 
-    // Print the string. We must make sure to not pass this user-supplied string as the format
+    // Print the string. We must make sure to not pass this dolboebusermode-supplied string as the format
     // string, as `DbgPrint` may then format any format specifiers it contains. This could
     // potentially be an attack vector.
     let s = ANSI_STRING {

@@ -19,8 +19,6 @@ fn main() -> Result<(), Error> {
         .create(false)
         .open("\\??\\Womic")?;
 
-
-
     unsafe {
         ioctl_write_value(file.as_raw_handle(), &5)?;
     }

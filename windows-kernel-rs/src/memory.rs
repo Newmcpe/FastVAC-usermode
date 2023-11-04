@@ -1,6 +1,7 @@
 use crate::error::{Error, IntoResult};
 use windows_kernel_sys::base::{MM_COPY_ADDRESS, MM_COPY_MEMORY_PHYSICAL, MM_COPY_MEMORY_VIRTUAL, PHYSICAL_ADDRESS};
 use windows_kernel_sys::base::_MEMORY_CACHING_TYPE as MEMORY_CACHING_TYPE;
+use crate::println;
 
 #[repr(i32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

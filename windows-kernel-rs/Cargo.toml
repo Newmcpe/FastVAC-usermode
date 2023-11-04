@@ -10,7 +10,7 @@ panic = "abort"
 panic = "abort"
 
 [features]
-default = ["alloc"]
+default = ["alloc", "system"]
 alloc = []
 system = []
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["intrin", "ntoskrnl"]
+default = ["intrin", "ntoskrnl", "netio"]
 intrin = []
 ntoskrnl = []
 netio = []

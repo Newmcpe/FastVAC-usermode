@@ -96,12 +96,8 @@ macro_rules! kernel_module {
             }
         }
 
-        pub unsafe extern "C" fn driver_exit(
-            driver: *mut $crate::DRIVER_OBJECT,
-        ) {
-            let driver = unsafe {
-                Driver::from_raw(driver)
-            };
+        pub unsafe extern "C" fn driver_exit(driver: *mut $crate::DRIVER_OBJECT) {
+            let driver = unsafe { Driver::from_raw(driver) };
 
             match __MOD.take() {
                 Some(mut m) => m.cleanup(driver),

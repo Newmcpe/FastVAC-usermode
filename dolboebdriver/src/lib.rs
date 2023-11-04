@@ -2,23 +2,32 @@
 
 extern crate alloc;
 
-use alloc::vec;
 use alloc::vec::Vec;
+use core::ffi::{c_int, c_void};
 use windows_kernel_rs::device::{
     Completion, Device, DeviceDoFlags, DeviceFlags, DeviceOperations, DeviceType, RequestError};
 use windows_kernel_rs::{Access, Driver, Error, IoControlRequest, kernel_module, KernelModule, println, RequiredAccess, SymbolicLink};
+use windows_kernel_rs::memory::{CopyAddress, read_memory};
+use windows_kernel_rs::process::Process;
+use windows_kernel_sys::base::PEPROCESS;
 
-struct MyDevice {
+struct DolboebDevice {
     value: u32,
 }
 
+struct MemoryReadRequest {
+    address: u64,
+}
+
 const IOCTL_PRINT_VALUE: u32 = 0x800;
-const IOCTL_READ_VALUE:  u32 = 0x801;
+const IOCTL_READ_VALUE: u32 = 0x801;
 const IOCTL_WRITE_VALUE: u32 = 0x802;
 
-impl MyDevice {
+impl DolboebDevice {
     fn print_value(&mut self, _request: &IoControlRequest) -> Result<u32, Error> {
-        println!("value: {}", self.value);
+        let address = unsafe { PsGetProcessSectionBaseAddress(Process::by_id(10896usize).unwrap().process) };
+
+        println!("Value: {:x?}", address);
 
         Ok(0)
     }
@@ -27,7 +36,6 @@ impl MyDevice {
         let mut user_ptr = request.user_ptr();
 
         user_ptr.write(&self.value)?;
-
         Ok(core::mem::size_of::<u32>() as u32)
     }
 
@@ -40,7 +48,7 @@ impl MyDevice {
     }
 }
 
-impl DeviceOperations for MyDevice {
+impl DeviceOperations for DolboebDevice {
     fn ioctl(&mut self, _device: &Device, request: IoControlRequest) -> Result<Completion, RequestError> {
         let result = match request.function() {
             (_, IOCTL_PRINT_VALUE) =>
@@ -58,6 +66,7 @@ impl DeviceOperations for MyDevice {
         }
     }
 }
+
 struct Module {
     _device: Device,
     _symbolic_link: SymbolicLink,
@@ -71,17 +80,31 @@ impl KernelModule for Module {
             DeviceFlags::SECURE_OPEN,
             DeviceDoFlags::DO_BUFFERED_IO,
             Access::NonExclusive,
-            MyDevice {
+            DolboebDevice {
                 value: 0,
             },
         )?;
         let symbolic_link = SymbolicLink::new("\\??\\Womic", "\\Device\\Womic")?;
+
+        println!("Driver initialized");
 
         Ok(Module {
             _device: device,
             _symbolic_link: symbolic_link,
         })
     }
+
+    fn cleanup(&mut self, _driver: Driver) {
+
+        println!("Driver unloaded");
+    }
+}
+
+//NTKERNELAPI PVOID NTAPI PsGetProcessSectionBaseAddress(
+//     PEPROCESS Process
+// );
+extern "system" {
+    fn PsGetProcessSectionBaseAddress(process: PEPROCESS) -> *mut c_void;
 }
 
 kernel_module!(Module);
