@@ -1,3 +1,5 @@
+use core::ffi::{c_int, c_void};
+use core::mem;
 use bitflags::bitflags;
 use crate::error::{Error, IntoResult};
 use windows_kernel_sys::base::{CLIENT_ID, HANDLE, KAPC_STATE, OBJECT_ATTRIBUTES, PEPROCESS};
@@ -38,6 +40,7 @@ impl Process {
         unsafe {
             PsLookupProcessByProcessId(process_id as _, &mut process)
         }.into_result()?;
+        }.into_result()?;
 
         Ok(Self {
             process,
@@ -56,6 +59,12 @@ impl Process {
         unsafe {
             ProcessAttachment::attach(self.process)
         }
+    }
+
+    pub fn get_base_address(&self) -> *mut usize {
+        let attachment = self.attach();
+        let address = unsafe { PsGetProcessSectionBaseAddress(self.process) };
+        address
     }
 }
 
@@ -133,4 +142,8 @@ impl Drop for ZwProcess {
             ZwClose(self.handle);
         }
     }
+}
+
+extern "system" {
+    pub fn PsGetProcessSectionBaseAddress(process: PEPROCESS) -> *mut usize;
 }

@@ -23,6 +23,7 @@ pub mod sync;
 pub mod user_ptr;
 pub mod version;
 
+use core::ffi::c_int;
 pub use crate::affinity::{get_cpu_count, get_current_cpu_num, run_on_cpu, run_on_each_cpu};
 pub use crate::device::{Access, Completion, Device, DeviceDoFlags, DeviceFlags, DeviceOperations, DeviceType, dispatch_device, RequestError};
 pub use crate::driver::Driver;
@@ -34,7 +35,6 @@ pub use crate::user_ptr::UserPtr;
 
 pub use widestring::U16CString;
 pub use windows_kernel_sys::base::{DRIVER_OBJECT, IRP_MJ_MAXIMUM_FUNCTION, NTSTATUS, STATUS_SUCCESS, UNICODE_STRING};
-
 #[cfg(feature = "alloc")]
 #[global_allocator]
 static ALLOCATOR: allocator::KernelAllocator = allocator::KernelAllocator::new(
@@ -42,8 +42,19 @@ static ALLOCATOR: allocator::KernelAllocator = allocator::KernelAllocator::new(
     );
 
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+unsafe fn panic(_info: &core::panic::PanicInfo) -> ! {
+    KeBugCheckEx(0x1c8, None, None, None, None);
     loop {}
+}
+
+extern "system" {
+    fn KeBugCheckEx(
+        BugCheckCode: c_int,
+        BugCheckParameter1: Option<usize>,
+        BugCheckParameter2: Option<usize>,
+        BugCheckParameter3: Option<usize>,
+        BugCheckParameter4: Option<usize>,
+    );
 }
 
 #[used]

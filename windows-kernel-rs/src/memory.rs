@@ -142,6 +142,7 @@ pub fn read_memory(
     let (flags, copy_addr) = source.into();
     let mut bytes = 0;
 
+    unsafe { println!("source: {:x?}", copy_addr.__bindgen_anon_1.VirtualAddress); }
     unsafe {
         MmCopyMemory(
             buffer.as_mut_ptr() as _,

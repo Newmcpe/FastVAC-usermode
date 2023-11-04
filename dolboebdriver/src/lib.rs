@@ -2,14 +2,11 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_int};
 use windows_kernel_rs::device::{
     Completion, Device, DeviceDoFlags, DeviceFlags, DeviceOperations, DeviceType, RequestError};
 use windows_kernel_rs::{Access, Driver, Error, IoControlRequest, kernel_module, KernelModule, println, RequiredAccess, SymbolicLink};
-use windows_kernel_rs::memory::{CopyAddress, read_memory};
 use windows_kernel_rs::process::Process;
-use windows_kernel_sys::base::PEPROCESS;
 
 struct DolboebDevice {
     value: u32,
@@ -25,9 +22,10 @@ const IOCTL_WRITE_VALUE: u32 = 0x802;
 
 impl DolboebDevice {
     fn print_value(&mut self, _request: &IoControlRequest) -> Result<u32, Error> {
-        let address = unsafe { PsGetProcessSectionBaseAddress(Process::by_id(10896usize).unwrap().process) };
+        let process = Process::by_id(3048).unwrap();
+        let base_address = process.get_base_address();
 
-        println!("Value: {:x?}", address);
+        println!("base_address: {:x?}", base_address);
 
         Ok(0)
     }
@@ -95,16 +93,18 @@ impl KernelModule for Module {
     }
 
     fn cleanup(&mut self, _driver: Driver) {
-
         println!("Driver unloaded");
     }
 }
 
-//NTKERNELAPI PVOID NTAPI PsGetProcessSectionBaseAddress(
-//     PEPROCESS Process
-// );
 extern "system" {
-    fn PsGetProcessSectionBaseAddress(process: PEPROCESS) -> *mut c_void;
+    fn KeBugCheckEx(
+        BugCheckCode: c_int,
+        BugCheckParameter1: Option<usize>,
+        BugCheckParameter2: Option<usize>,
+        BugCheckParameter3: Option<usize>,
+        BugCheckParameter4: Option<usize>,
+    );
 }
 
 kernel_module!(Module);
