@@ -4,19 +4,14 @@ use std::{
     fmt::Debug,
     rc::Rc,
 };
-use std::mem::transmute;
-use std::os::raw::c_void;
-use std::ptr::addr_of;
 
 use anyhow::Context;
 use imgui::{Condition, FontConfig, FontGlyphRanges, FontId, FontSource, Key};
 use obfstr::obfstr;
-use windows::core::s;
 use windows::Win32::System::Console::GetConsoleProcessList;
-use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress, LoadLibraryA};
 
 use overlay::{LoadingError, OverlayError, OverlayOptions, OverlayTarget};
-use shared::kernel_request::KernelRequest;
+use shared::kernel_request::Driver;
 
 use crate::cs_interface::CSInterface;
 use crate::ui::SettingsUI;
@@ -103,30 +98,12 @@ impl Application {
     }
 }
 
-type fNtUserGetPointerProprietaryId = unsafe extern "fastcall" fn(*const c_void) -> u64;
-
 #[allow(non_snake_case)]
 fn main() {
-    unsafe { LoadLibraryA(s!("win32u.dll")) }.unwrap();
-    unsafe { LoadLibraryA(s!("user32.dll")) }.unwrap();
+    let driver = Driver::init();
+    let a: u64 = driver.readv(0xffff01);
 
-    let NtUserGetPointerProprietaryId = unsafe {
-        let win32u = GetModuleHandleA(s!("win32u.dll")).unwrap();
-        let NtUserGetPointerProprietaryId = GetProcAddress(win32u, s!("NtUserGetPointerProprietaryId"));
-        transmute::<_, fNtUserGetPointerProprietaryId>(NtUserGetPointerProprietaryId.unwrap())
-    };
-
-    let request = KernelRequest {
-        key: 8888,
-        operation: 0,
-        process_id: 0,
-        address: 0,
-        size: 0,
-    };
-
-    let request_void_ptr = addr_of!(request) as *const c_void;
-
-    unsafe { NtUserGetPointerProprietaryId(request_void_ptr) };
+    dbg!(a);
 }
 
 fn overlay_main() -> anyhow::Result<()> {
