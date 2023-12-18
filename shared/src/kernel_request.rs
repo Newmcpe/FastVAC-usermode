@@ -1,11 +1,12 @@
 use std::mem::size_of;
 use std::sync::Mutex;
 use std::thread::sleep;
+use std::time::Instant;
 
 use windows::core::imp::CloseHandle;
 use windows::core::PCSTR;
 use windows::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE, HANDLE};
-use windows::Win32::Storage::FileSystem::{CreateFileA, FILE_ATTRIBUTE_NORMAL, FILE_BEGIN, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadFile, SetFilePointer, WriteFile};
+use windows::Win32::Storage::FileSystem::{CreateFileA, DeleteFileA, FILE_ATTRIBUTE_NORMAL, FILE_BEGIN, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_ALWAYS, OPEN_EXISTING, ReadFile, SetFilePointer, WriteFile};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -45,12 +46,12 @@ impl Driver {
 
     pub fn get_clientdll_base(&self) -> u64 {
         let file_name = self.file_name.lock().unwrap();
-
+        let now = Instant::now();
         let request = INFORMATION {
             operation: 0x1,
             src_addr: 0,
             dst_addr: 0,
-            size: 256,
+            size: 0,
             client_base: 0,
         };
 
@@ -64,7 +65,7 @@ impl Driver {
                 (GENERIC_WRITE | GENERIC_READ).0,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 None,
-                OPEN_EXISTING,
+                OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL,
                 HANDLE::default(),
             ).expect("TODO: panic message")
@@ -88,12 +89,12 @@ impl Driver {
             let received_dto: CommunicationDTO = unsafe { std::mem::transmute(buffer) };
             if received_dto.mode != 2 {
                 dbg!(received_dto);
-                sleep(std::time::Duration::from_millis(1000));
                 continue;
             }
-
-            //    unsafe { fclose(file); };
-            CloseHandle(file);
+            println!("{}", now.elapsed().as_millis());
+            unsafe { CloseHandle(file.0); }
+            unsafe { DeleteFileA(PCSTR::from_raw((file_name.to_string() + "\0").as_ptr())) }.unwrap();
+            println!("{}", now.elapsed().as_millis());
             return received_dto.request.client_base;
         }
     }

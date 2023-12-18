@@ -29,8 +29,18 @@ async fn main() {
 
     let driver = driver.clone();
     let dll_base = driver.get_clientdll_base();
-
     println!("dll_base: 0x{:X}", dll_base);
+    let dll_base = driver.get_clientdll_base();
+    println!("dll_base: 0x{:X}", dll_base);
+    let dll_base = driver.get_clientdll_base();
+    println!("dll_base: 0x{:X}", dll_base);
+    let dll_base = driver.get_clientdll_base();
+    println!("dll_base: 0x{:X}", dll_base);
+    let dll_base = driver.get_clientdll_base();
+    println!("dll_base: 0x{:X}", dll_base);
+    let dll_base = driver.get_clientdll_base();
+    println!("dll_base: 0x{:X}", dll_base);
+
 }
 
 
