@@ -4,6 +4,8 @@ use std::{
     fmt::Debug,
     rc::Rc,
 };
+use std::io::Write;
+use std::sync::Arc;
 
 use anyhow::Context;
 use imgui::{Condition, FontConfig, FontGlyphRanges, FontId, FontSource, Key};
@@ -19,7 +21,18 @@ use crate::ui::SettingsUI;
 mod ui;
 mod cs_interface;
 
-const dwLocalPlayerPawn: usize = 0x16B9398;
+
+#[allow(non_snake_case)]
+#[tokio::main]
+async fn main() {
+    let driver = Arc::new(Driver::init());
+
+    let driver = driver.clone();
+    let dll_base = driver.get_clientdll_base();
+
+    println!("dll_base: 0x{:X}", dll_base);
+}
+
 
 pub struct AppFonts {
     default: FontId,
@@ -98,14 +111,6 @@ impl Application {
     }
 }
 
-#[allow(non_snake_case)]
-fn main() {
-    let driver = Driver::init();
-    let a: u64 = driver.readv(0xffff01);
-
-    dbg!(a);
-}
-
 fn overlay_main() -> anyhow::Result<()> {
     let kernel_interface = CSInterface::init();
     let app_fonts: Rc<RefCell<Option<AppFonts>>> = Default::default();
@@ -172,7 +177,6 @@ fn overlay_main() -> anyhow::Result<()> {
 
     overlay.main_loop(
         {
-            let application = application.clone();
             move |controller| {
                 true
             }
